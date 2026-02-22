@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Layered Minecraft Agent</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 880px; margin: 24px auto; }
+    #log { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-height: 220px; white-space: pre-wrap; }
+    .row { display: flex; gap: 8px; margin-top: 12px; }
+    input { flex: 1; padding: 10px; }
+    button { padding: 10px 16px; }
+  </style>
+</head>
+<body>
+  <h1>Layered Minecraft Agent</h1>
+  <p>Three layers: reflex survival, task model, Gemini planner.</p>
+  <div id="log"></div>
+  <div class="row">
+    <input id="msg" placeholder="Try: mine diamonds, build house, stop" />
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const log = document.getElementById("log");
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+
+    function push(text) {
+      log.textContent += text + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "status") {
+        push(`[system] ${data.message}`);
+      } else {
+        push(`[you] ${data.user}`);
+        push(`[goal] ${data.goal}`);
+        push(`[plan] ${data.plan}`);
+        push(`[runtime] ${data.last_action}`);
+        push("-");
+      }
+    };
+
+    function send() {
+      const el = document.getElementById("msg");
+      const message = el.value.trim();
+      if (!message) return;
+      ws.send(JSON.stringify({ message }));
+      el.value = "";
+    }
+
+    document.getElementById("send").onclick = send;
+    document.getElementById("msg").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") send();
+    });
+  </script>
+</body>
+</html>
